@@ -1149,6 +1149,216 @@ h3 {
   text-decoration: underline;
 }
 
+.section-head.compact {
+  align-items: center;
+}
+
+.order-statement {
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(24, 33, 31, 0.07);
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.filter-row button {
+  min-height: 38px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--forest-2);
+  cursor: pointer;
+  font-weight: 900;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.filter-row button:hover,
+.filter-row button.active {
+  border-color: var(--forest);
+  background: #f0f7f0;
+}
+
+.statement-table-wrap {
+  overflow-x: auto;
+}
+
+.statement-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.statement-table th,
+.statement-table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.statement-table th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
+.statement-table td {
+  color: #3b4742;
+  font-weight: 700;
+}
+
+.statement-table td span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.statement-status {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 0;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.statement-status.completed {
+  background: #ecf6ed;
+  color: var(--leaf);
+}
+
+.statement-status.in-progress {
+  background: #fff4da;
+  color: #936313;
+}
+
+.statement-status.cancelled {
+  background: #fff0ec;
+  color: var(--tomato);
+}
+
+.statement-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.statement-summary strong {
+  color: var(--forest-2);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.settings-card {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  padding: clamp(20px, 3vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(24, 33, 31, 0.07);
+}
+
+.settings-card p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.settings-list {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-list span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.settings-list strong {
+  color: var(--forest-2);
+  text-align: right;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.toggle-row span {
+  color: var(--forest-2);
+  font-weight: 900;
+}
+
+.plan-management details {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--smoke);
+}
+
+.plan-management summary {
+  cursor: pointer;
+  color: var(--forest-2);
+  font-weight: 1000;
+}
+
+.quiet-danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 12px 16px;
+  border: 1px solid #f1d0c8;
+  border-radius: 10px;
+  background: #fff;
+  color: #9b2f1f;
+  cursor: pointer;
+  font-weight: 900;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.quiet-danger-button:hover {
+  border-color: var(--tomato);
+  background: #fff4f1;
+}
+
+.quiet-danger-button:disabled {
+  cursor: not-allowed;
+  border-color: var(--line);
+  color: var(--disabled);
+  background: #f5f6f5;
+}
+
 @media (max-width: 1080px) {
   .hero,
   .auth-page,
@@ -1163,7 +1373,8 @@ h3 {
   .meal-grid,
   .meal-grid.featured,
   .subscriptions-grid,
-  .metric-grid {
+  .metric-grid,
+  .settings-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1203,6 +1414,7 @@ h3 {
   .preview-grid,
   .subscriptions-grid,
   .metric-grid,
+  .settings-grid,
   .process-grid,
   .auth-preview-grid,
   .delivery-choice {

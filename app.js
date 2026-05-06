@@ -168,27 +168,82 @@ const subscriptions = [
   },
 ];
 
-const state = {
-  page: "auth",
-  authMode: "signup",
-  user: null,
-  selectedMealId: null,
-  selectedSizeId: "two",
-  cart: [],
-  metrics: {
-    totalOrders: 2,
-    totalSpent: 41000,
-    activeSubscription: "None yet",
-    favoriteSoup: "Egusi",
-    nextDelivery: "No delivery scheduled",
-    officeDeliveries: 0,
-  },
-  orderPlaced: false,
-  waitlistJoined: false,
-  lastOrder: null,
+const DEFAULT_METRICS = {
+  totalOrders: 2,
+  totalSpent: 41000,
+  activeSubscription: "Workweek Classic",
+  favoriteSoup: "Egusi",
+  nextDelivery: "Friday office drop-off",
+  officeDeliveries: 1,
 };
 
+const DEFAULT_ORDERS = [
+  {
+    id: "HIB-2401",
+    date: "May 02, 2026",
+    title: "Egusi Soup Kit",
+    subtitle: "2 servings kit",
+    channel: "Home delivery",
+    status: "Completed",
+    amount: 5000,
+    balance: 5000,
+  },
+  {
+    id: "HIB-2402",
+    date: "May 04, 2026",
+    title: "Workweek Classic Subscription",
+    subtitle: "Monthly plan",
+    channel: "Office delivery",
+    status: "In progress",
+    amount: 36000,
+    balance: 41000,
+  },
+];
+
+function defaultState() {
+  return {
+    page: "auth",
+    authMode: "signup",
+    user: null,
+    selectedMealId: null,
+    selectedSizeId: "two",
+    cart: [],
+    metrics: { ...DEFAULT_METRICS },
+    orders: DEFAULT_ORDERS.map((order) => ({ ...order })),
+    orderFilter: "All",
+    settings: {
+      twoFactor: false,
+      passwordChanged: false,
+      subscriptionCancelled: false,
+    },
+    orderPlaced: false,
+    waitlistJoined: false,
+    lastOrder: null,
+  };
+}
+
+const state = defaultState();
+
 const app = document.querySelector("#app");
+
+function resetPrototype() {
+  Object.assign(state, defaultState());
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function orderStatusOptions() {
+  return ["All", "In progress", "Completed", "Cancelled"];
+}
+
+function filteredOrders() {
+  if (state.orderFilter === "All") return state.orders;
+  return state.orders.filter((order) => order.status === state.orderFilter);
+}
+
+function nextOrderId() {
+  return `HIB-${2400 + state.orders.length + 1}`;
+}
 
 function money(value) {
   return `N${value.toLocaleString("en-NG")}`;
@@ -219,11 +274,14 @@ function go(page, payload = {}) {
 
 function loginFromForm(form) {
   const data = new FormData(form);
+  const email = data.get("email") || "customer@hib.com";
+  const fallbackName = email.split("@")[0].replace(/[._-]+/g, " ");
   state.user = {
-    name: data.get("name") || "Client User",
-    email: data.get("email") || "customer@hib.com",
+    name: data.get("name") || fallbackName || "Client User",
+    email,
     phone: data.get("phone") || "0800 000 0000",
     country: data.get("country") || "Nigeria",
+    password: data.get("password") || "demo-password",
   };
   state.page = "home";
   render();
@@ -281,8 +339,23 @@ function placeOrder(form) {
   state.metrics.totalSpent += total;
   state.metrics.nextDelivery = deliveryType === "office" ? "Next office drop-off: Friday" : "Next home delivery: Friday";
   if (deliveryType === "office") state.metrics.officeDeliveries += 1;
-  if (subscriptionItem) state.metrics.activeSubscription = subscriptionItem.title.replace(" Subscription", "");
+  if (subscriptionItem) {
+    state.metrics.activeSubscription = subscriptionItem.title.replace(" Subscription", "");
+    state.settings.subscriptionCancelled = false;
+  }
   if (mealItem) state.metrics.favoriteSoup = getMeal(mealItem.mealId).shortName;
+
+  const newBalance = state.orders.reduce((sum, order) => sum + order.amount, 0) + total;
+  state.orders.unshift({
+    id: nextOrderId(),
+    date: "May 06, 2026",
+    title: items.length === 1 ? items[0].title : `${items.length} items checkout`,
+    subtitle: items.map((item) => item.subtitle).join(" + "),
+    channel: deliveryType === "office" ? "Office delivery" : "Home delivery",
+    status: "In progress",
+    amount: total,
+    balance: newBalance,
+  });
 
   state.lastOrder = {
     items,
@@ -339,6 +412,7 @@ function layout(content) {
           <button class="nav-button ${state.page === "home" ? "active" : ""}" data-go="home">Home</button>
           <button class="nav-button ${state.page === "meals" ? "active" : ""}" data-go="meals">Meals</button>
           <button class="nav-button ${state.page === "subscriptions" ? "active" : ""}" data-go="subscriptions">Subscriptions</button>
+          <button class="nav-button ${state.page === "settings" ? "active" : ""}" data-go="settings">Settings</button>
           <button class="nav-button ${state.page === "cart" ? "active" : ""}" data-go="cart">
             Cart <span class="cart-count">${count}</span>
           </button>
@@ -377,23 +451,31 @@ function authPage() {
           <button class="${!isSignup ? "active" : ""}" data-auth-mode="signin">Sign In</button>
         </div>
         <h2>${isSignup ? "Create your HIB account" : "Welcome back"}</h2>
-        <p>${isSignup ? "Enter customer details before viewing the product experience." : "Use the same fields for this prototype login."}</p>
+        <p>${isSignup ? "Enter customer details before viewing the product experience." : "Sign in with email and password to return to the customer dashboard."}</p>
         <form id="authForm" class="form-grid">
-          <div class="field">
-            <label for="name">Full name</label>
-            <input id="name" name="name" type="text" placeholder="Enter full name" required />
-          </div>
+          ${isSignup ? `
+            <div class="field">
+              <label for="name">Full name</label>
+              <input id="name" name="name" type="text" placeholder="Enter full name" required />
+            </div>
+          ` : ""}
           <div class="field">
             <label for="email">Email address</label>
             <input id="email" name="email" type="email" placeholder="name@email.com" required />
           </div>
+          ${isSignup ? `
+            <div class="field">
+              <label for="phone">Phone number</label>
+              <input id="phone" name="phone" type="tel" placeholder="0800 000 0000" required />
+            </div>
+            <div class="field">
+              <label for="country">Country</label>
+              <input id="country" name="country" type="text" placeholder="Nigeria" required />
+            </div>
+          ` : ""}
           <div class="field">
-            <label for="phone">Phone number</label>
-            <input id="phone" name="phone" type="tel" placeholder="0800 000 0000" required />
-          </div>
-          <div class="field">
-            <label for="country">Country</label>
-            <input id="country" name="country" type="text" placeholder="Nigeria" required />
+            <label for="password">${isSignup ? "Create password" : "Password"}</label>
+            <input id="password" name="password" type="password" placeholder="${isSignup ? "Create a secure password" : "Enter password"}" required />
           </div>
           <button class="primary-button" type="submit">${isSignup ? "Create Account" : "Log In"}</button>
         </form>
@@ -431,6 +513,8 @@ function homePage() {
       ${metricCard("Office deliveries", state.metrics.officeDeliveries)}
     </section>
 
+    ${orderDetailsSection()}
+
     <section class="home-block">
       <div class="section-head">
         <div>
@@ -456,6 +540,58 @@ function homePage() {
       </div>
     </section>
   `);
+}
+
+function orderDetailsSection() {
+  const orders = filteredOrders();
+  const closingBalance = orders.reduce((sum, order) => sum + order.amount, 0);
+  return `
+    <section class="home-block order-statement">
+      <div class="section-head compact">
+        <div>
+          <p class="eyebrow">Order details</p>
+          <h2>Activity Statement</h2>
+        </div>
+        <div class="filter-row" aria-label="Order status filters">
+          ${orderStatusOptions().map((status) => `
+            <button class="${state.orderFilter === status ? "active" : ""}" data-order-filter="${status}">${status}</button>
+          `).join("")}
+        </div>
+      </div>
+      <div class="statement-table-wrap">
+        <table class="statement-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Reference</th>
+              <th>Order</th>
+              <th>Channel</th>
+              <th>Status</th>
+              <th>Amount</th>
+              <th>Running total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${orders.map((order) => `
+              <tr>
+                <td>${order.date}</td>
+                <td>${order.id}</td>
+                <td><strong>${order.title}</strong><span>${order.subtitle}</span></td>
+                <td>${order.channel}</td>
+                <td><span class="statement-status ${order.status.toLowerCase().replace(" ", "-")}">${order.status}</span></td>
+                <td>${money(order.amount)}</td>
+                <td>${money(order.balance)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="statement-summary">
+        <span>${orders.length} record${orders.length === 1 ? "" : "s"} shown</span>
+        <strong>Filtered total: ${money(closingBalance)}</strong>
+      </div>
+    </section>
+  `;
 }
 
 function metricCard(label, value) {
@@ -616,6 +752,80 @@ function planCard(plan) {
       <button class="primary-button" data-plan="${plan.id}">Subscribe</button>
     </article>
   `;
+}
+
+function settingsPage() {
+  const hasSubscription = state.metrics.activeSubscription !== "None yet";
+  const subscriptionState = state.settings.subscriptionCancelled ? "Cancellation scheduled" : "Active";
+  return layout(`
+    <section>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Account settings</p>
+          <h2>Security and Plan Controls</h2>
+        </div>
+        <p>Manage account security, delivery preferences, and subscription status from one place.</p>
+      </div>
+      <div class="settings-grid">
+        <article class="settings-card">
+          <h3>Profile</h3>
+          <div class="settings-list">
+            <div><span>Name</span><strong>${state.user.name}</strong></div>
+            <div><span>Email</span><strong>${state.user.email}</strong></div>
+            <div><span>Phone</span><strong>${state.user.phone}</strong></div>
+            <div><span>Country</span><strong>${state.user.country}</strong></div>
+          </div>
+        </article>
+
+        <article class="settings-card">
+          <h3>Change password</h3>
+          <form id="securityForm" class="form-grid">
+            <div class="field">
+              <label for="currentPassword">Current password</label>
+              <input id="currentPassword" name="currentPassword" type="password" placeholder="Current password" required />
+            </div>
+            <div class="field">
+              <label for="newPassword">New password</label>
+              <input id="newPassword" name="newPassword" type="password" placeholder="New password" required />
+            </div>
+            <button class="primary-button" type="submit">Update Password</button>
+            ${state.settings.passwordChanged ? `<div class="success-box">Password updated for this prototype session.</div>` : ""}
+          </form>
+        </article>
+
+        <article class="settings-card">
+          <h3>Two-factor authentication</h3>
+          <p>Add an extra verification step before account access.</p>
+          <div class="toggle-row">
+            <span>${state.settings.twoFactor ? "2FA is active" : "2FA is off"}</span>
+            <button class="secondary-button" data-toggle-2fa>${state.settings.twoFactor ? "Turn Off" : "Activate 2FA"}</button>
+          </div>
+        </article>
+
+        <article class="settings-card plan-management">
+          <h3>Subscription management</h3>
+          <div class="settings-list">
+            <div><span>Current plan</span><strong>${state.metrics.activeSubscription}</strong></div>
+            <div><span>Status</span><strong>${subscriptionState}</strong></div>
+          </div>
+          <details>
+            <summary>Plan options</summary>
+            <p>Use this section when a customer needs to pause, downgrade, or end a plan.</p>
+            <div class="button-row">
+              <button class="secondary-button" data-go="subscriptions">Change Plan</button>
+              <button class="quiet-danger-button" data-cancel-subscription ${hasSubscription && !state.settings.subscriptionCancelled ? "" : "disabled"}>Cancel Subscription</button>
+            </div>
+          </details>
+        </article>
+
+        <article class="settings-card reset-card">
+          <h3>Prototype reset</h3>
+          <p>Press <strong>R</strong> anywhere outside a form field to reset the demo back to the first sign-up screen.</p>
+          <button class="secondary-button" data-reset-demo>Reset Demo</button>
+        </article>
+      </div>
+    </section>
+  `);
 }
 
 function cartPage() {
@@ -786,6 +996,7 @@ function render() {
     meals: mealsPage,
     detail: detailPage,
     subscriptions: subscriptionsPage,
+    settings: settingsPage,
     cart: cartPage,
     checkout: checkoutPage,
   };
@@ -804,6 +1015,10 @@ app.addEventListener("click", (event) => {
   const removeTarget = event.target.closest("[data-remove]");
   const logoutTarget = event.target.closest("[data-logout]");
   const authPreviewTarget = event.target.closest("[data-auth-preview]");
+  const orderFilterTarget = event.target.closest("[data-order-filter]");
+  const toggleTwoFactorTarget = event.target.closest("[data-toggle-2fa]");
+  const cancelSubscriptionTarget = event.target.closest("[data-cancel-subscription]");
+  const resetTarget = event.target.closest("[data-reset-demo]");
 
   if (authModeTarget) {
     state.authMode = authModeTarget.dataset.authMode;
@@ -814,6 +1029,40 @@ app.addEventListener("click", (event) => {
   if (authPreviewTarget) {
     state.authMode = "signup";
     render();
+    return;
+  }
+
+  if (orderFilterTarget) {
+    state.orderFilter = orderFilterTarget.dataset.orderFilter;
+    render();
+    return;
+  }
+
+  if (toggleTwoFactorTarget) {
+    state.settings.twoFactor = !state.settings.twoFactor;
+    render();
+    return;
+  }
+
+  if (cancelSubscriptionTarget) {
+    state.settings.subscriptionCancelled = true;
+    state.metrics.activeSubscription = "None yet";
+    state.orders.unshift({
+      id: nextOrderId(),
+      date: "May 06, 2026",
+      title: "Subscription cancellation",
+      subtitle: "Plan access ends after current billing cycle",
+      channel: "Account settings",
+      status: "Cancelled",
+      amount: 0,
+      balance: state.orders.reduce((sum, order) => sum + order.amount, 0),
+    });
+    render();
+    return;
+  }
+
+  if (resetTarget) {
+    resetPrototype();
     return;
   }
 
@@ -870,6 +1119,23 @@ app.addEventListener("submit", (event) => {
   if (event.target.id === "checkoutForm") {
     event.preventDefault();
     placeOrder(event.target);
+  }
+
+  if (event.target.id === "securityForm") {
+    event.preventDefault();
+    const data = new FormData(event.target);
+    state.user.password = data.get("newPassword") || state.user.password;
+    state.settings.passwordChanged = true;
+    render();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  const tag = event.target.tagName;
+  const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || event.target.isContentEditable;
+  if (!isTyping && event.key.toLowerCase() === "r") {
+    event.preventDefault();
+    resetPrototype();
   }
 });
 
