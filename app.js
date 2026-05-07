@@ -132,37 +132,49 @@ const meals = [
   },
 ];
 
-const subscriptions = [
+const PAYG_RULES = {
+  starterCredit: 5000,
+  trialDays: 7,
+};
+
+const paidFeatureIdeas = [
   {
-    id: "starter",
-    name: "Starter Duo",
-    price: 19000,
-    cadence: "Monthly",
-    description: "Four 2-serving boxes per month for students or light weekly cooking.",
-    includes: ["4 soup kits", "Mix any available soup", "Home or campus delivery"],
+    title: "Extra soup boxes",
+    price: "Pay per box",
+    description: "The first 2-serving box is covered by the starter credit. Any extra box is paid at checkout.",
   },
   {
-    id: "workweek",
-    name: "Workweek Classic",
-    price: 36000,
-    cadence: "Monthly",
-    description: "Eight 2-serving boxes for busy professionals who cook twice a week.",
-    includes: ["8 soup kits", "Scheduled home delivery", "Change soups monthly"],
+    title: "Larger serving sizes",
+    price: "Pay the difference",
+    description: "Use the free ₦5,000 starter credit toward a 4-serving or family pack, then pay the balance.",
   },
   {
-    id: "family",
-    name: "Family Table",
-    price: 82000,
-    cadence: "Monthly",
-    description: "Four family-size packs for households that want weekend soup planning handled.",
-    includes: ["4 family packs", "Serves 6-7 people per pack", "Protein choice per delivery"],
+    title: "Premium protein upgrades",
+    price: "Paid add-on",
+    description: "Charge extra for goat meat, assorted meat, smoked fish, or double-protein packs.",
+  },
+  {
+    title: "Scheduled delivery",
+    price: "Paid convenience",
+    description: "Customers can pay a delivery fee when they want a specific day or faster delivery window.",
+  },
+  {
+    title: "Family bundles",
+    price: "Bundle price",
+    description: "Offer multi-box household bundles as one-time purchases for weekend cooking.",
+  },
+  {
+    title: "Pepper Soup early access",
+    price: "Paid pilot",
+    description: "When ready, charge a small pilot fee for limited Pepper Soup launch access and feedback.",
   },
 ];
 
 const DEFAULT_METRICS = {
   totalOrders: 2,
-  totalSpent: 41000,
-  activeSubscription: "Workweek Classic",
+  totalSpent: 12000,
+  trialStatus: "7-day starter active",
+  starterCredit: "₦5,000 available",
   favoriteSoup: "Egusi",
   nextDelivery: "Friday home delivery",
   deliveryPreference: "Home delivery",
@@ -172,22 +184,22 @@ const DEFAULT_ORDERS = [
   {
     id: "HIB-2401",
     date: "May 02, 2026",
-    title: "Egusi Soup Kit",
-    subtitle: "2 servings kit",
+    title: "Starter box credit",
+    subtitle: "First 2-serving soup box",
     channel: "Home delivery",
     status: "Completed",
-    amount: 5000,
-    balance: 5000,
+    amount: 0,
+    balance: 0,
   },
   {
     id: "HIB-2402",
     date: "May 04, 2026",
-    title: "Workweek Classic Subscription",
-    subtitle: "Monthly plan",
+    title: "Ogbono Soup Kit",
+    subtitle: "4 servings kit after starter credit",
     channel: "Home delivery",
     status: "In progress",
-    amount: 36000,
-    balance: 41000,
+    amount: 12000,
+    balance: 12000,
   },
 ];
 
@@ -205,7 +217,10 @@ function defaultState() {
     settings: {
       twoFactor: false,
       passwordChanged: false,
-      subscriptionCancelled: false,
+    },
+    trial: {
+      freeBoxUsed: false,
+      trialEnds: "May 13, 2026",
     },
     orderPlaced: false,
     waitlistJoined: false,
@@ -246,10 +261,6 @@ function getMeal(id) {
 
 function getSize(id) {
   return PRICES.find((size) => size.id === id);
-}
-
-function getPlan(id) {
-  return subscriptions.find((plan) => plan.id === id);
 }
 
 function go(page, payload = {}) {
@@ -294,45 +305,40 @@ function addMealToCart(mealId, sizeId) {
   go("cart");
 }
 
-function addPlanToCart(planId) {
-  const plan = getPlan(planId);
-  if (!plan) return;
-
-  state.cart.push({
-    id: `plan-${plan.id}-${Date.now()}`,
-    type: "subscription",
-    title: `${plan.name} Subscription`,
-    subtitle: `${plan.cadence} plan`,
-    planId: plan.id,
-    price: plan.price,
-  });
-  go("cart");
-}
-
 function removeFromCart(itemId) {
   state.cart = state.cart.filter((item) => item.id !== itemId);
   render();
 }
 
-function cartTotal(items = state.cart) {
+function cartSubtotal(items = state.cart) {
   return items.reduce((sum, item) => sum + item.price, 0);
+}
+
+function starterDiscount(items = state.cart) {
+  if (state.trial.freeBoxUsed) return 0;
+  const mealItems = items.filter((item) => item.type === "meal");
+  if (!mealItems.length) return 0;
+  return Math.min(PAYG_RULES.starterCredit, Math.max(...mealItems.map((item) => item.price)));
+}
+
+function cartTotal(items = state.cart) {
+  return Math.max(0, cartSubtotal(items) - starterDiscount(items));
 }
 
 function placeOrder(form) {
   const data = new FormData(form);
   const items = [...state.cart];
+  const subtotal = cartSubtotal(items);
+  const discount = starterDiscount(items);
   const total = cartTotal(items);
-  const subscriptionItem = items.find((item) => item.type === "subscription");
   const mealItem = items.find((item) => item.mealId);
 
   state.metrics.totalOrders += 1;
   state.metrics.totalSpent += total;
   state.metrics.nextDelivery = "Next home delivery: Friday";
   state.metrics.deliveryPreference = "Home delivery";
-  if (subscriptionItem) {
-    state.metrics.activeSubscription = subscriptionItem.title.replace(" Subscription", "");
-    state.settings.subscriptionCancelled = false;
-  }
+  if (discount > 0) state.trial.freeBoxUsed = true;
+  state.metrics.starterCredit = state.trial.freeBoxUsed ? "Starter credit used" : "₦5,000 available";
   if (mealItem) state.metrics.favoriteSoup = getMeal(mealItem.mealId).shortName;
 
   const newBalance = state.orders.reduce((sum, order) => sum + order.amount, 0) + total;
@@ -349,6 +355,8 @@ function placeOrder(form) {
 
   state.lastOrder = {
     items,
+    subtotal,
+    discount,
     total,
     deliveryType: "home",
     deliveryLabel: "Home delivery",
@@ -401,7 +409,7 @@ function layout(content) {
         <nav class="nav-actions" aria-label="Primary navigation">
           <button class="nav-button ${state.page === "home" ? "active" : ""}" data-go="home">Home</button>
           <button class="nav-button ${state.page === "meals" ? "active" : ""}" data-go="meals">Meals</button>
-          <button class="nav-button ${state.page === "subscriptions" ? "active" : ""}" data-go="subscriptions">Subscriptions</button>
+          <button class="nav-button ${state.page === "pricing" ? "active" : ""}" data-go="pricing">Pay As You Go</button>
           <button class="nav-button ${state.page === "settings" ? "active" : ""}" data-go="settings">Settings</button>
           <button class="nav-button ${state.page === "cart" ? "active" : ""}" data-go="cart">
             Cart <span class="cart-count">${count}</span>
@@ -482,11 +490,11 @@ function homePage() {
         <p class="eyebrow">Customer dashboard</p>
         <h1>Welcome back, ${firstName}</h1>
         <p class="lead">
-          Track your soup-kit orders, subscription status, delivery preference, and next cooking plan from one place.
+          Track your soup-kit orders, starter credit, delivery preference, and next cooking plan from one place.
         </p>
         <div class="button-row">
           <button class="primary-button" data-go="meals">Browse Meals</button>
-          <button class="secondary-button" data-go="subscriptions">View Subscriptions</button>
+          <button class="secondary-button" data-go="pricing">How PAYG Works</button>
         </div>
       </div>
       <div class="dashboard-showcase">
@@ -497,10 +505,10 @@ function homePage() {
     <section class="metric-grid" aria-label="Customer metrics">
       ${metricCard("Total orders", state.metrics.totalOrders)}
       ${metricCard("Total spent", money(state.metrics.totalSpent))}
-      ${metricCard("Active subscription", state.metrics.activeSubscription)}
+      ${metricCard("Trial status", state.metrics.trialStatus)}
+      ${metricCard("Starter credit", state.metrics.starterCredit)}
       ${metricCard("Favorite soup", state.metrics.favoriteSoup)}
       ${metricCard("Next delivery", state.metrics.nextDelivery)}
-      ${metricCard("Delivery preference", state.metrics.deliveryPreference)}
     </section>
 
     ${orderDetailsSection()}
@@ -710,51 +718,52 @@ function detailPage() {
   `);
 }
 
-function subscriptionsPage() {
+function pricingPage() {
   return layout(`
     <section>
       <div class="section-head">
         <div>
-          <p class="eyebrow">Subscription models</p>
-          <h2>Subscribe for routine cooking</h2>
+          <p class="eyebrow">Pay as you go</p>
+          <h2>Start free, pay when you add more</h2>
         </div>
-        <p>Subscriptions turn the product from an occasional box into a weekly habit for students, professionals, and families.</p>
+        <p>No recurring commitment. A new customer gets a 7-day starter trial with a ₦5,000 credit for one 2-serving soup box, then pays only for additional boxes or upgrades.</p>
       </div>
-      <div class="subscriptions-grid">
-        ${subscriptions.map(planCard).join("")}
+      <div class="payg-hero-card">
+        <div>
+          <p class="eyebrow">Starter MVP offer</p>
+          <h3>First 2-serving box can be free</h3>
+          <p>Use the starter credit on one soup box. If the customer adds a second item, chooses a larger pack, or selects a premium upgrade, the balance becomes payable at checkout.</p>
+        </div>
+        <button class="primary-button" data-go="meals">Choose Free Starter Box</button>
+      </div>
+      <div class="paid-feature-grid">
+        ${paidFeatureIdeas.map(paidFeatureCard).join("")}
       </div>
     </section>
   `);
 }
 
-function planCard(plan) {
+function paidFeatureCard(feature) {
   return `
-    <article class="plan-card">
+    <article class="paid-feature-card">
       <div>
-        <span class="status-pill">${plan.cadence}</span>
-        <h3>${plan.name}</h3>
-        <p>${plan.description}</p>
+        <span class="status-pill">${feature.price}</span>
+        <h3>${feature.title}</h3>
+        <p>${feature.description}</p>
       </div>
-      <strong class="plan-price">${money(plan.price)}</strong>
-      <ul class="clean-list">
-        ${plan.includes.map((item) => `<li>${item}</li>`).join("")}
-      </ul>
-      <button class="primary-button" data-plan="${plan.id}">Subscribe</button>
     </article>
   `;
 }
 
 function settingsPage() {
-  const hasSubscription = state.metrics.activeSubscription !== "None yet";
-  const subscriptionState = state.settings.subscriptionCancelled ? "Cancellation scheduled" : "Active";
   return layout(`
     <section>
       <div class="section-head">
         <div>
           <p class="eyebrow">Account settings</p>
-          <h2>Security and Plan Controls</h2>
+          <h2>Security and Preferences</h2>
         </div>
-        <p>Manage account security, delivery preferences, and subscription status from one place.</p>
+        <p>Manage account security and delivery preferences from one place.</p>
       </div>
       <div class="settings-grid">
         <article class="settings-card">
@@ -792,20 +801,14 @@ function settingsPage() {
           </div>
         </article>
 
-        <article class="settings-card plan-management">
-          <h3>Subscription management</h3>
+        <article class="settings-card">
+          <h3>PAYG trial</h3>
           <div class="settings-list">
-            <div><span>Current plan</span><strong>${state.metrics.activeSubscription}</strong></div>
-            <div><span>Status</span><strong>${subscriptionState}</strong></div>
+            <div><span>Trial status</span><strong>${state.metrics.trialStatus}</strong></div>
+            <div><span>Starter credit</span><strong>${state.metrics.starterCredit}</strong></div>
+            <div><span>Trial ends</span><strong>${state.trial.trialEnds}</strong></div>
           </div>
-          <details>
-            <summary>Plan options</summary>
-            <p>Use this section when a customer needs to pause, downgrade, or end a plan.</p>
-            <div class="button-row">
-              <button class="secondary-button" data-go="subscriptions">Change Plan</button>
-              <button class="quiet-danger-button" data-cancel-subscription ${hasSubscription && !state.settings.subscriptionCancelled ? "" : "disabled"}>Cancel Subscription</button>
-            </div>
-          </details>
+          <button class="secondary-button" data-go="pricing">View PAYG Rules</button>
         </article>
 
         <article class="settings-card reset-card">
@@ -819,6 +822,8 @@ function settingsPage() {
 }
 
 function cartPage() {
+  const subtotal = cartSubtotal();
+  const discount = starterDiscount();
   const total = cartTotal();
   const cartContent = state.cart.length
     ? `
@@ -838,6 +843,8 @@ function cartPage() {
         <aside class="cart-panel">
           <h3>Order Summary</h3>
           <div class="summary-row"><span>Items</span><strong>${state.cart.length}</strong></div>
+          <div class="summary-row"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
+          ${discount > 0 ? `<div class="summary-row savings"><span>Starter credit</span><strong>- ${money(discount)}</strong></div>` : ""}
           <div class="summary-row total"><span>Total</span><strong>${money(total)}</strong></div>
           <button class="primary-button" data-go="checkout">Checkout</button>
           <button class="secondary-button" data-go="meals">Add More Meals</button>
@@ -847,10 +854,10 @@ function cartPage() {
     : `
       <div class="empty-state">
         <h3>Your cart is empty</h3>
-        <p>Browse meal kits or add a subscription plan to begin.</p>
+        <p>Browse meal kits to use your starter credit or pay as you go.</p>
         <div class="button-row">
           <button class="primary-button" data-go="meals">Browse Meals</button>
-          <button class="secondary-button" data-go="subscriptions">View Subscriptions</button>
+          <button class="secondary-button" data-go="pricing">How PAYG Works</button>
         </div>
       </div>
     `;
@@ -887,6 +894,8 @@ function checkoutPage() {
         <aside class="checkout-panel">
           <h3>Final Summary</h3>
           ${orderItems(state.lastOrder.items)}
+          <div class="summary-row"><span>Subtotal</span><strong>${money(state.lastOrder.subtotal)}</strong></div>
+          ${state.lastOrder.discount > 0 ? `<div class="summary-row savings"><span>Starter credit</span><strong>- ${money(state.lastOrder.discount)}</strong></div>` : ""}
           <div class="summary-row total"><span>Total</span><strong>${money(state.lastOrder.total)}</strong></div>
         </aside>
       </section>
@@ -897,7 +906,7 @@ function checkoutPage() {
     return layout(`
       <section class="empty-state">
         <h2>No items to checkout</h2>
-        <p>Add a soup kit or subscription before placing an order.</p>
+        <p>Add a soup kit before placing an order.</p>
         <button class="primary-button" data-go="meals">Browse Meals</button>
       </section>
     `);
@@ -931,6 +940,8 @@ function checkoutPage() {
         <aside class="checkout-panel">
           <h3>Order Summary</h3>
           ${orderItems(state.cart)}
+          <div class="summary-row"><span>Subtotal</span><strong>${money(cartSubtotal())}</strong></div>
+          ${starterDiscount() > 0 ? `<div class="summary-row savings"><span>Starter credit</span><strong>- ${money(starterDiscount())}</strong></div>` : ""}
           <div class="summary-row total"><span>Total</span><strong>${money(cartTotal())}</strong></div>
         </aside>
       </div>
@@ -968,7 +979,7 @@ function render() {
     home: homePage,
     meals: mealsPage,
     detail: detailPage,
-    subscriptions: subscriptionsPage,
+    pricing: pricingPage,
     settings: settingsPage,
     cart: cartPage,
     checkout: checkoutPage,
@@ -983,14 +994,12 @@ app.addEventListener("click", (event) => {
   const detailTarget = event.target.closest("[data-detail]");
   const sizeTarget = event.target.closest("[data-size]");
   const addTarget = event.target.closest("[data-add]");
-  const planTarget = event.target.closest("[data-plan]");
   const waitlistTarget = event.target.closest("[data-waitlist]");
   const removeTarget = event.target.closest("[data-remove]");
   const logoutTarget = event.target.closest("[data-logout]");
   const authPreviewTarget = event.target.closest("[data-auth-preview]");
   const orderFilterTarget = event.target.closest("[data-order-filter]");
   const toggleTwoFactorTarget = event.target.closest("[data-toggle-2fa]");
-  const cancelSubscriptionTarget = event.target.closest("[data-cancel-subscription]");
   const resetTarget = event.target.closest("[data-reset-demo]");
 
   if (authModeTarget) {
@@ -1013,23 +1022,6 @@ app.addEventListener("click", (event) => {
 
   if (toggleTwoFactorTarget) {
     state.settings.twoFactor = !state.settings.twoFactor;
-    render();
-    return;
-  }
-
-  if (cancelSubscriptionTarget) {
-    state.settings.subscriptionCancelled = true;
-    state.metrics.activeSubscription = "None yet";
-    state.orders.unshift({
-      id: nextOrderId(),
-      date: "May 06, 2026",
-      title: "Subscription cancellation",
-      subtitle: "Plan access ends after current billing cycle",
-      channel: "Account settings",
-      status: "Cancelled",
-      amount: 0,
-      balance: state.orders.reduce((sum, order) => sum + order.amount, 0),
-    });
     render();
     return;
   }
@@ -1057,11 +1049,6 @@ app.addEventListener("click", (event) => {
 
   if (addTarget) {
     addMealToCart(addTarget.dataset.add, state.selectedSizeId);
-    return;
-  }
-
-  if (planTarget) {
-    addPlanToCart(planTarget.dataset.plan);
     return;
   }
 

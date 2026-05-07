@@ -1,26 +1,23 @@
-# Home in a Box
+# Home in a Box UI Prototype
 
-Home in a Box helps students, busy professionals, offices, and families order pre-cut ingredients, protein options, and simple cooking instructions for Nigerian soups.
+This is a static prototype for the ready-to-cook Nigerian soup kit service.
 
-## Prototype
+## Local Preview
 
-This repository contains a static UI prototype for the ready-to-cook Nigerian soup kit service.
+Open `index.html` in any modern browser.
 
-The prototype includes:
+## Client Sharing
 
-- Sign up and sign in screen
-- Customer dashboard with basic usage metrics
-- Meal selection for Egusi, Ogbono, Okro, and Pepper Soup pipeline
-- Meal details with ingredients and cooking steps
-- Serving sizes for 2 people, 4 people, and family packs
-- Subscription plans
-- Cart and checkout flow
-- Home and office delivery options
+Do not share a `file:///C:/...` link with a client because that path only works on the computer where the file exists.
 
-## GitHub Pages
+To create a public link:
 
-The site is designed to run directly from GitHub Pages using the repository root.
+1. Upload the `soup-kit-prototype` folder to Netlify, Vercel, Cloudflare Pages, or GitHub Pages.
+2. Use the generated public URL for review, such as `https://home-in-a-box.netlify.app`.
+3. After buying a real domain, connect it to the host. A final domain could be `https://hib.com` or `https://homeinabox.ng`.
 
-Expected public URL:
+The prototype uses relative local files, so it can be hosted on any static-site platform.
 
-`https://jayr3.github.io/home-in-a-box/`
+## Editing Data
+
+Edit `app.js` to update soups, prices, pay-as-you-go rules, ingredients, cooking steps, and image URLs.

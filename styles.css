@@ -602,6 +602,10 @@ h3 {
   font-size: 22px;
 }
 
+.summary-row.savings {
+  color: var(--leaf);
+}
+
 .empty-state {
   padding: 34px;
   border: 1px dashed #b9c8bd;
@@ -1042,16 +1046,16 @@ h3 {
   filter: grayscale(0.25);
 }
 
-.subscriptions-grid {
+.paid-feature-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
-.plan-card {
+.paid-feature-card {
   display: grid;
   gap: 18px;
-  min-height: 420px;
+  min-height: 230px;
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -1060,25 +1064,45 @@ h3 {
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-.plan-card:hover {
+.paid-feature-card:hover {
   border-color: rgba(23, 75, 58, 0.34);
   box-shadow: var(--shadow);
   transform: translateY(-3px);
 }
 
-.plan-card p {
+.paid-feature-card p {
   color: var(--muted);
   line-height: 1.55;
 }
 
-.plan-card .clean-list {
-  padding-left: 18px;
+.payg-hero-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 22px;
+  padding: clamp(22px, 4vw, 34px);
+  border-radius: 18px;
+  background: #123a2f;
+  color: #fff;
+  box-shadow: var(--shadow);
 }
 
-.plan-price {
-  color: var(--forest-2);
-  font-size: 34px;
-  line-height: 1;
+.payg-hero-card h3 {
+  color: #fff;
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.payg-hero-card p {
+  max-width: 760px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+}
+
+.payg-hero-card .eyebrow {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 
 .site-footer {
@@ -1277,46 +1301,6 @@ h3 {
   font-weight: 900;
 }
 
-.plan-management details {
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--smoke);
-}
-
-.plan-management summary {
-  cursor: pointer;
-  color: var(--forest-2);
-  font-weight: 1000;
-}
-
-.quiet-danger-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 46px;
-  padding: 12px 16px;
-  border: 1px solid #f1d0c8;
-  border-radius: 10px;
-  background: #fff;
-  color: #9b2f1f;
-  cursor: pointer;
-  font-weight: 900;
-  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
-}
-
-.quiet-danger-button:hover {
-  border-color: var(--tomato);
-  background: #fff4f1;
-}
-
-.quiet-danger-button:disabled {
-  cursor: not-allowed;
-  border-color: var(--line);
-  color: var(--disabled);
-  background: #f5f6f5;
-}
-
 @media (max-width: 1080px) {
   .hero,
   .auth-page,
@@ -1330,7 +1314,7 @@ h3 {
 
   .meal-grid,
   .meal-grid.featured,
-  .subscriptions-grid,
+  .paid-feature-grid,
   .metric-grid,
   .settings-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1370,11 +1354,15 @@ h3 {
   .info-columns,
   .size-options,
   .preview-grid,
-  .subscriptions-grid,
+  .paid-feature-grid,
   .metric-grid,
   .settings-grid,
   .process-grid,
   .auth-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payg-hero-card {
     grid-template-columns: 1fr;
   }
 
