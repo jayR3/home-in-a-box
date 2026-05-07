@@ -1081,48 +1081,6 @@ h3 {
   line-height: 1;
 }
 
-.office-plan {
-  background: #f8fbf8;
-  border-color: rgba(79, 143, 82, 0.34);
-}
-
-.delivery-choice {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.delivery-choice label {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 54px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #fff;
-  cursor: pointer;
-  font-weight: 900;
-}
-
-.delivery-choice label:has(input:checked) {
-  border-color: var(--forest);
-  background: #f0f7f0;
-}
-
-.delivery-choice input {
-  accent-color: var(--forest);
-}
-
-.office-field {
-  display: none;
-}
-
-#checkoutForm:has(input[value="office"]:checked) .office-field {
-  display: grid;
-}
-
 .site-footer {
   display: flex;
   gap: 10px;
@@ -1416,8 +1374,7 @@ h3 {
   .metric-grid,
   .settings-grid,
   .process-grid,
-  .auth-preview-grid,
-  .delivery-choice {
+  .auth-preview-grid {
     grid-template-columns: 1fr;
   }
 

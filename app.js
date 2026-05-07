@@ -147,7 +147,7 @@ const subscriptions = [
     price: 36000,
     cadence: "Monthly",
     description: "Eight 2-serving boxes for busy professionals who cook twice a week.",
-    includes: ["8 soup kits", "Priority office delivery", "Change soups monthly"],
+    includes: ["8 soup kits", "Scheduled home delivery", "Change soups monthly"],
   },
   {
     id: "family",
@@ -157,15 +157,6 @@ const subscriptions = [
     description: "Four family-size packs for households that want weekend soup planning handled.",
     includes: ["4 family packs", "Serves 6-7 people per pack", "Protein choice per delivery"],
   },
-  {
-    id: "office",
-    name: "Office Pantry",
-    price: 90000,
-    cadence: "Monthly",
-    description: "A workplace plan for teams that want ready-to-cook meal kits delivered to the office.",
-    includes: ["20 mixed 2-serving boxes", "Office drop-off", "Monthly usage report"],
-    office: true,
-  },
 ];
 
 const DEFAULT_METRICS = {
@@ -173,8 +164,8 @@ const DEFAULT_METRICS = {
   totalSpent: 41000,
   activeSubscription: "Workweek Classic",
   favoriteSoup: "Egusi",
-  nextDelivery: "Friday office drop-off",
-  officeDeliveries: 1,
+  nextDelivery: "Friday home delivery",
+  deliveryPreference: "Home delivery",
 };
 
 const DEFAULT_ORDERS = [
@@ -193,7 +184,7 @@ const DEFAULT_ORDERS = [
     date: "May 04, 2026",
     title: "Workweek Classic Subscription",
     subtitle: "Monthly plan",
-    channel: "Office delivery",
+    channel: "Home delivery",
     status: "In progress",
     amount: 36000,
     balance: 41000,
@@ -330,15 +321,14 @@ function cartTotal(items = state.cart) {
 function placeOrder(form) {
   const data = new FormData(form);
   const items = [...state.cart];
-  const deliveryType = data.get("deliveryType") || "home";
   const total = cartTotal(items);
   const subscriptionItem = items.find((item) => item.type === "subscription");
   const mealItem = items.find((item) => item.mealId);
 
   state.metrics.totalOrders += 1;
   state.metrics.totalSpent += total;
-  state.metrics.nextDelivery = deliveryType === "office" ? "Next office drop-off: Friday" : "Next home delivery: Friday";
-  if (deliveryType === "office") state.metrics.officeDeliveries += 1;
+  state.metrics.nextDelivery = "Next home delivery: Friday";
+  state.metrics.deliveryPreference = "Home delivery";
   if (subscriptionItem) {
     state.metrics.activeSubscription = subscriptionItem.title.replace(" Subscription", "");
     state.settings.subscriptionCancelled = false;
@@ -351,7 +341,7 @@ function placeOrder(form) {
     date: "May 06, 2026",
     title: items.length === 1 ? items[0].title : `${items.length} items checkout`,
     subtitle: items.map((item) => item.subtitle).join(" + "),
-    channel: deliveryType === "office" ? "Office delivery" : "Home delivery",
+    channel: "Home delivery",
     status: "In progress",
     amount: total,
     balance: newBalance,
@@ -360,9 +350,9 @@ function placeOrder(form) {
   state.lastOrder = {
     items,
     total,
-    deliveryType,
-    deliveryLabel: deliveryType === "office" ? "Office delivery" : "Home delivery",
-    location: deliveryType === "office" ? data.get("officeAddress") : data.get("location"),
+    deliveryType: "home",
+    deliveryLabel: "Home delivery",
+    location: data.get("location"),
   };
 
   state.cart = [];
@@ -433,7 +423,7 @@ function authPage() {
         <p class="eyebrow">Ready-to-cook Nigerian soup kits</p>
         <h1>Cook local soup faster without losing the home-cooked feel.</h1>
         <p class="lead">
-          Home in a Box helps students, busy professionals, offices, and families order pre-cut ingredients,
+          Home in a Box helps students, busy professionals, and families order pre-cut ingredients,
           protein options, and simple cooking instructions for Nigerian soups.
         </p>
         <div class="auth-preview-grid">
@@ -510,7 +500,7 @@ function homePage() {
       ${metricCard("Active subscription", state.metrics.activeSubscription)}
       ${metricCard("Favorite soup", state.metrics.favoriteSoup)}
       ${metricCard("Next delivery", state.metrics.nextDelivery)}
-      ${metricCard("Office deliveries", state.metrics.officeDeliveries)}
+      ${metricCard("Delivery preference", state.metrics.deliveryPreference)}
     </section>
 
     ${orderDetailsSection()}
@@ -728,7 +718,7 @@ function subscriptionsPage() {
           <p class="eyebrow">Subscription models</p>
           <h2>Subscribe for routine cooking</h2>
         </div>
-        <p>Subscriptions turn the product from an occasional box into a weekly habit for students, professionals, families, and offices.</p>
+        <p>Subscriptions turn the product from an occasional box into a weekly habit for students, professionals, and families.</p>
       </div>
       <div class="subscriptions-grid">
         ${subscriptions.map(planCard).join("")}
@@ -739,7 +729,7 @@ function subscriptionsPage() {
 
 function planCard(plan) {
   return `
-    <article class="plan-card ${plan.office ? "office-plan" : ""}">
+    <article class="plan-card">
       <div>
         <span class="status-pill">${plan.cadence}</span>
         <h3>${plan.name}</h3>
@@ -923,31 +913,14 @@ function checkoutPage() {
       </div>
       <div class="checkout-layout">
         <form class="checkout-panel form-grid" id="checkoutForm">
-          <div class="delivery-choice">
-            <label>
-              <input type="radio" name="deliveryType" value="home" checked />
-              <span>Home delivery</span>
-            </label>
-            <label>
-              <input type="radio" name="deliveryType" value="office" />
-              <span>Office delivery</span>
-            </label>
-          </div>
+          <div class="success-box">Delivery method: Home delivery</div>
           <div class="field">
             <label for="name">Name</label>
             <input id="name" name="name" type="text" value="${state.user.name}" required />
           </div>
           <div class="field">
-            <label for="location">Home location</label>
-            <input id="location" name="location" type="text" placeholder="E.g. Yaba, Lagos" />
-          </div>
-          <div class="field office-field">
-            <label for="officeName">Office / company name</label>
-            <input id="officeName" name="officeName" type="text" placeholder="E.g. Sterling Towers" />
-          </div>
-          <div class="field office-field">
-            <label for="officeAddress">Office delivery address</label>
-            <input id="officeAddress" name="officeAddress" type="text" placeholder="Street, building, floor" />
+            <label for="location">Delivery location</label>
+            <input id="location" name="location" type="text" placeholder="E.g. Yaba, Lagos" required />
           </div>
           <div class="field">
             <label for="phone">Phone number</label>
