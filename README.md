@@ -1,23 +1,23 @@
-# Home in a Box UI Prototype
+# Home in a Box Web App
 
-This is a static prototype for the ready-to-cook Nigerian soup kit service.
+This is a static front-end customer application for Home in a Box, a ready-to-cook Nigerian soup-kit service.
 
 ## Local Preview
 
 Open `index.html` in any modern browser.
 
-## Client Sharing
+## Current Scope
 
-Do not share a `file:///C:/...` link with a client because that path only works on the computer where the file exists.
+- Customer sign up and sign in flow
+- Dashboard with order metrics and activity statement
+- Meal catalogue, meal details, serving sizes and paid upgrades
+- Cart, starter credit logic, delivery options and checkout confirmation
+- Order history filters
+- Account settings, password update, 2FA toggle and saved addresses
+- Terms, privacy, support and food-safety content
 
-To create a public link:
-
-1. Upload the `soup-kit-prototype` folder to Netlify, Vercel, Cloudflare Pages, or GitHub Pages.
-2. Use the generated public URL for review, such as `https://home-in-a-box.netlify.app`.
-3. After buying a real domain, connect it to the host. A final domain could be `https://hib.com` or `https://homeinabox.ng`.
-
-The prototype uses relative local files, so it can be hosted on any static-site platform.
+The current build stores data in the browser with `localStorage`. A live production launch still needs a backend for real authentication, payments, inventory, fulfilment and notifications.
 
 ## Editing Data
 
-Edit `app.js` to update soups, prices, pay-as-you-go rules, ingredients, cooking steps, and image URLs.
+Edit `app.js` to update soups, prices, checkout rules, ingredients, cooking steps and image URLs.
