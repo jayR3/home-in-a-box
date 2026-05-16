@@ -6,7 +6,8 @@ const SERVING_OPTIONS = [
   { id: "family", label: "Family pack", short: "6-7", multiplier: 3.25, note: "Family pot" },
 ];
 
-const PROFIT_MARKUP = 0.5;
+const BASE_SOUP_MARKUP = 2;
+const PROTEIN_MARKUP = 0.3;
 
 const BASE_SOUP_COSTS = {
   egusi: 1368.1866,
@@ -320,14 +321,22 @@ function getDelivery(id) {
 }
 
 function roundPrice(value) {
-  return Math.ceil(value / 50) * 50;
+  return Math.round(value);
+}
+
+function baseKitPrice(mealId, sizeId) {
+  const baseCost = BASE_SOUP_COSTS[mealId] || BASE_SOUP_COSTS.egusi;
+  const size = getSize(sizeId);
+  return roundPrice(baseCost * size.multiplier * (1 + BASE_SOUP_MARKUP));
+}
+
+function proteinPouchPrice(proteinId) {
+  const protein = getProtein(proteinId);
+  return roundPrice(protein.cost * (1 + PROTEIN_MARKUP));
 }
 
 function customerPrice(mealId, sizeId, proteinId) {
-  const baseCost = BASE_SOUP_COSTS[mealId] || BASE_SOUP_COSTS.egusi;
-  const protein = getProtein(proteinId);
-  const size = getSize(sizeId);
-  return roundPrice((baseCost + protein.cost) * size.multiplier * (1 + PROFIT_MARKUP));
+  return baseKitPrice(mealId, sizeId) + proteinPouchPrice(proteinId);
 }
 
 function mealStartingPrice(mealId) {
@@ -434,7 +443,9 @@ function addMealToCart(mealId) {
   const protein = getProtein(state.selectedProteinId);
   if (!meal || meal.inPipeline) return;
 
-  const price = customerPrice(meal.id, size.id, protein.id);
+  const basePrice = baseKitPrice(meal.id, size.id);
+  const proteinPrice = proteinPouchPrice(protein.id);
+  const price = basePrice + proteinPrice;
 
   state.cart.push({
     id: `cart-${meal.id}-${Date.now()}`,
@@ -446,7 +457,8 @@ function addMealToCart(mealId) {
     proteinId: protein.id,
     proteinLabel: protein.label,
     proteinShort: protein.short,
-    basePrice: price,
+    basePrice,
+    proteinPrice,
     price,
   });
   go("cart");
@@ -853,7 +865,7 @@ function mealCard(meal) {
           ${SERVING_OPTIONS.map((size) => `
             <div class="price-row">
               <span>${size.short} servings</span>
-              <strong>${meal.inPipeline ? "Soon" : `From ${money(customerPrice(meal.id, size.id, "mackerel"))}`}</strong>
+              <strong>${meal.inPipeline ? "Soon" : money(baseKitPrice(meal.id, size.id))}</strong>
             </div>
           `).join("")}
         </div>
@@ -869,7 +881,9 @@ function detailPage() {
   const meal = getMeal(state.selectedMealId);
   const selectedSize = getSize(state.selectedSizeId);
   const selectedProtein = getProtein(state.selectedProteinId);
-  const total = meal.inPipeline ? 0 : customerPrice(meal.id, selectedSize.id, selectedProtein.id);
+  const selectedBasePrice = meal.inPipeline ? 0 : baseKitPrice(meal.id, selectedSize.id);
+  const selectedProteinPrice = meal.inPipeline ? 0 : proteinPouchPrice(selectedProtein.id);
+  const total = selectedBasePrice + selectedProteinPrice;
   const waitlisted = state.waitlist.includes(meal.id);
   const actionButton = meal.inPipeline
     ? `<button class="primary-button" data-waitlist="${meal.id}">${waitlisted ? "Waitlist Joined" : "Join Launch Waitlist"}</button>`
@@ -903,6 +917,7 @@ function detailPage() {
                 <button class="size-card ${state.selectedSizeId === size.id ? "selected" : ""}" data-size="${size.id}">
                   <strong>${size.label}</strong>
                   <span>${size.note}</span>
+                  <em>${money(baseKitPrice(meal.id, size.id))}</em>
                 </button>
               `).join("")}
             </div>
@@ -917,12 +932,19 @@ function detailPage() {
                 <button class="protein-card ${state.selectedProteinId === protein.id ? "selected" : ""}" data-protein="${protein.id}">
                   ${icon(protein.icon)}
                   <strong>${protein.label}</strong>
-                  <span>${money(customerPrice(meal.id, selectedSize.id, protein.id))}</span>
+                  <span>${protein.pouch}</span>
+                  <em>${money(proteinPouchPrice(protein.id))}</em>
                 </button>
               `).join("")}
             </div>
           </div>
           `}
+          ${!meal.inPipeline ? `
+          <div class="price-breakout">
+            <div><span>Base kit</span><strong>${money(selectedBasePrice)}</strong></div>
+            <div><span>Protein pouch</span><strong>${money(selectedProteinPrice)}</strong></div>
+          </div>
+          ` : ""}
           <div class="inline-total">
             <span>Item total</span>
             <strong>${meal.inPipeline ? "Soon" : money(total)}</strong>
@@ -1098,7 +1120,7 @@ function cartPage() {
               <div>
                 <h3>${item.title}</h3>
                 <p>${item.subtitle}</p>
-                <p>${money(item.price)}</p>
+                <p>Base ${money(item.basePrice)} + Protein ${money(item.proteinPrice || 0)}</p>
               </div>
               <button class="icon-button" data-remove="${item.id}" aria-label="Remove ${item.title}">Remove</button>
             </article>
@@ -1242,7 +1264,7 @@ function orderItems(items) {
       ${items.map((item) => `
         <div class="order-mini">
           ${packedProductVisual(getMeal(item.mealId), item)}
-          <span>${item.title}<small>${item.subtitle}</small></span>
+          <span>${item.title}<small>${item.subtitle} | Base ${money(item.basePrice)} + Protein ${money(item.proteinPrice || 0)}</small></span>
           <strong>${money(item.price)}</strong>
         </div>
       `).join("")}
