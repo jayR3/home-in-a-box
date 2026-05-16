@@ -1,15 +1,61 @@
 const STORAGE_KEY = "hib_customer_app_v1";
 
 const SERVING_OPTIONS = [
-  { id: "two", label: "2 servings", price: 5000, note: "Best for one or two people" },
-  { id: "four", label: "4 servings", price: 12000, note: "Good for roommates or small homes" },
-  { id: "family", label: "Family pack", price: 22000, note: "Serves 6-7 people comfortably" },
+  { id: "two", label: "2 servings", short: "2", multiplier: 1, note: "Solo or pair" },
+  { id: "four", label: "4 servings", short: "4", multiplier: 2, note: "Small home" },
+  { id: "family", label: "Family pack", short: "6-7", multiplier: 3.25, note: "Family pot" },
 ];
 
-const ADD_ONS = [
-  { id: "assorted", label: "Assorted protein", price: 1500, note: "Beef, pomo and smoked fish mix" },
-  { id: "double-protein", label: "Double protein", price: 2500, note: "Extra protein for heavier meals" },
-  { id: "spice-plus", label: "Extra spice pack", price: 700, note: "For customers who want more heat" },
+const PROFIT_MARKUP = 0.5;
+
+const BASE_SOUP_COSTS = {
+  egusi: 1368.1866,
+  ogbono: 1273.6866,
+  okro: 1185.4866,
+  "pepper-soup": 0,
+};
+
+const PROTEIN_OPTIONS = [
+  {
+    id: "beef-assorted",
+    label: "Cow meat + Assorted",
+    short: "Beef mix",
+    cost: 2150,
+    icon: "cow",
+    pouch: "Shredded beef + assorted",
+  },
+  {
+    id: "goat-assorted",
+    label: "Goat meat + Assorted",
+    short: "Goat mix",
+    cost: 790,
+    icon: "goat",
+    pouch: "Goat meat + assorted",
+  },
+  {
+    id: "beef-goat-assorted",
+    label: "Cow + Goat + Assorted",
+    short: "Triple mix",
+    cost: 2840,
+    icon: "combo",
+    pouch: "Cow meat + goat meat + assorted",
+  },
+  {
+    id: "mackerel",
+    label: "Smoked mackerel",
+    short: "Fish",
+    cost: 380,
+    icon: "fish",
+    pouch: "Boneless smoked mackerel flakes",
+  },
+  {
+    id: "mackerel-beef",
+    label: "Mackerel + Cow meat",
+    short: "Fish + beef",
+    cost: 2030,
+    icon: "fish-beef",
+    pouch: "Packed together, not mixed",
+  },
 ];
 
 const DELIVERY_OPTIONS = [
@@ -161,7 +207,7 @@ function defaultState() {
     user: null,
     selectedMealId: "egusi",
     selectedSizeId: "two",
-    selectedAddOns: [],
+    selectedProteinId: "mackerel",
     selectedDeliveryId: "standard",
     cart: [],
     orders: [],
@@ -223,7 +269,7 @@ function seedReturningCustomer(email) {
         id: "HIB-2404",
         date: "May 15, 2026",
         title: "Egusi Soup Kit",
-        subtitle: "2 servings + assorted protein",
+        subtitle: "2 servings + beef mix",
         channel: "Standard home delivery",
         status: "In progress",
         paymentStatus: "Paid",
@@ -233,7 +279,7 @@ function seedReturningCustomer(email) {
         id: "HIB-2403",
         date: "May 11, 2026",
         title: "Okro Soup Kit",
-        subtitle: "4 servings",
+        subtitle: "4 servings + smoked mackerel",
         channel: "Scheduled home delivery",
         status: "Completed",
         paymentStatus: "Paid",
@@ -265,8 +311,28 @@ function getSize(id) {
   return SERVING_OPTIONS.find((size) => size.id === id) || SERVING_OPTIONS[0];
 }
 
+function getProtein(id) {
+  return PROTEIN_OPTIONS.find((protein) => protein.id === id) || PROTEIN_OPTIONS[0];
+}
+
 function getDelivery(id) {
   return DELIVERY_OPTIONS.find((option) => option.id === id) || DELIVERY_OPTIONS[0];
+}
+
+function roundPrice(value) {
+  return Math.ceil(value / 50) * 50;
+}
+
+function customerPrice(mealId, sizeId, proteinId) {
+  const baseCost = BASE_SOUP_COSTS[mealId] || BASE_SOUP_COSTS.egusi;
+  const protein = getProtein(proteinId);
+  const size = getSize(sizeId);
+  return roundPrice((baseCost + protein.cost) * size.multiplier * (1 + PROFIT_MARKUP));
+}
+
+function mealStartingPrice(mealId) {
+  if (getMeal(mealId).inPipeline) return null;
+  return Math.min(...PROTEIN_OPTIONS.map((protein) => customerPrice(mealId, "two", protein.id)));
 }
 
 function orderStatusOptions() {
@@ -324,7 +390,7 @@ function go(page, payload = {}) {
   if (payload.mealId) {
     state.selectedMealId = payload.mealId;
     state.selectedSizeId = "two";
-    state.selectedAddOns = [];
+    state.selectedProteinId = "mackerel";
   }
   saveState();
   render();
@@ -362,41 +428,27 @@ function loginFromForm(form) {
   render();
 }
 
-function selectedAddOnTotal() {
-  return state.selectedAddOns.reduce((sum, id) => {
-    const addOn = ADD_ONS.find((item) => item.id === id);
-    return sum + (addOn ? addOn.price : 0);
-  }, 0);
-}
-
-function selectedAddOnLabels() {
-  return state.selectedAddOns
-    .map((id) => ADD_ONS.find((item) => item.id === id))
-    .filter(Boolean)
-    .map((item) => item.label);
-}
-
 function addMealToCart(mealId) {
   const meal = getMeal(mealId);
   const size = getSize(state.selectedSizeId);
+  const protein = getProtein(state.selectedProteinId);
   if (!meal || meal.inPipeline) return;
 
-  const addOns = selectedAddOnLabels();
-  const addOnTotal = selectedAddOnTotal();
-  const price = size.price + addOnTotal;
+  const price = customerPrice(meal.id, size.id, protein.id);
 
   state.cart.push({
     id: `cart-${meal.id}-${Date.now()}`,
     type: "meal",
     mealId: meal.id,
     title: meal.name,
-    subtitle: [size.label, ...addOns].join(" + "),
+    subtitle: `${size.label} + ${protein.short}`,
     servingId: size.id,
-    basePrice: size.price,
-    addOns,
+    proteinId: protein.id,
+    proteinLabel: protein.label,
+    proteinShort: protein.short,
+    basePrice: price,
     price,
   });
-  state.selectedAddOns = [];
   go("cart");
 }
 
@@ -466,6 +518,58 @@ function foodVisual(meal, action = "detail") {
         <div class="pack-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       </div>
     </button>
+  `;
+}
+
+function icon(name) {
+  const paths = {
+    cow: `<path d="M5 11c0-3 2.5-5 7-5s7 2 7 5v5c0 2-1.5 3-3.5 3h-7C6.5 19 5 18 5 16v-5Z"/><path d="M7 7 5 4"/><path d="m17 7 2-3"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M10 17h4"/>`,
+    goat: `<path d="M7 10c0-3 2-5 5-5s5 2 5 5v5c0 3-2 5-5 5s-5-2-5-5v-5Z"/><path d="M9 6 7 2"/><path d="m15 6 2-4"/><path d="M10 13h.01"/><path d="M14 13h.01"/><path d="M11 17h2"/>`,
+    combo: `<path d="M4 10c0-2 1.5-3.5 4-3.5s4 1.5 4 3.5v4c0 2-1.5 3.5-4 3.5S4 16 4 14v-4Z"/><path d="M12 10c0-2 1.5-3.5 4-3.5s4 1.5 4 3.5v4c0 2-1.5 3.5-4 3.5S12 16 12 14v-4Z"/><path d="M8 20h8"/>`,
+    fish: `<path d="M3 12s4-5 9-5 9 5 9 5-4 5-9 5-9-5-9-5Z"/><path d="m3 12 4-3v6l-4-3Z"/><path d="M15 12h.01"/>`,
+    "fish-beef": `<path d="M3 9s3-4 7-4 7 4 7 4-3 4-7 4-7-4-7-4Z"/><path d="m3 9 3-2v4L3 9Z"/><path d="M12 9h.01"/><path d="M7 17h10"/><path d="M9 14h6l2 3-2 3H9l-2-3 2-3Z"/>`,
+    cart: `<path d="M6 6h15l-2 8H8L6 3H3"/><path d="M9 20h.01"/><path d="M18 20h.01"/>`,
+    check: `<path d="m5 13 4 4L19 7"/>`,
+    shield: `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>`,
+  };
+  return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.check}</svg>`;
+}
+
+function packedProductVisual(meal, item = {}) {
+  const protein = getProtein(item.proteinId || state.selectedProteinId);
+  const size = getSize(item.servingId || state.selectedSizeId);
+  return `
+    <div class="pack-shot" style="--pack-accent:${meal.accent}; --pack-photo:url('${meal.image}')">
+      <div class="pack-shadow"></div>
+      <div class="final-pack">
+        <div class="pack-window"></div>
+        <div class="pack-content">
+          <span>HIB</span>
+          <strong>${meal.shortName}</strong>
+          <small>${size.label}</small>
+        </div>
+        <div class="pouch-badge">
+          ${icon(protein.icon)}
+          <span>${protein.short}</span>
+        </div>
+      </div>
+      <div class="protein-pouch">
+        ${icon(protein.icon)}
+        <span>Protein pouch</span>
+        <strong>${protein.short}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function productStage(meal) {
+  return `
+    <div class="product-stage">
+      <div class="stage-photo">
+        <img src="${meal.image}" alt="${meal.name} cooked soup" loading="lazy" />
+      </div>
+      ${packedProductVisual(meal)}
+    </div>
   `;
 }
 
@@ -608,14 +712,14 @@ function homePage() {
         <p class="lead">
           Manage soup-kit orders, checkout credit, delivery details and account security from one dashboard.
         </p>
-        <div class="button-row">
+      <div class="button-row">
           <button class="primary-button" data-go="meals">Browse Meals</button>
           <button class="secondary-button" data-go="orders">View Orders</button>
         </div>
       </div>
       <div class="dashboard-card">
         <span>Recommended next box</span>
-        ${foodVisual(getMeal("egusi"))}
+        ${productStage(getMeal("egusi"))}
       </div>
     </section>
 
@@ -636,7 +740,7 @@ function homePage() {
           <p class="eyebrow">Launch menu</p>
           <h2>Built for fast Nigerian cooking</h2>
         </div>
-        <p>Choose a fresh kit, select the serving size, add optional upgrades and checkout only when the order has a payable balance.</p>
+        <p>Choose a fresh kit, pick a serving size, select one protein pouch and checkout only when the order has a payable balance.</p>
       </div>
       <div class="meal-grid featured">
         ${meals.slice(0, 3).map(mealCard).join("")}
@@ -746,8 +850,11 @@ function mealCard(meal) {
         <p>${meal.description}</p>
         <div class="highlight-row">${meal.trust.map((item) => `<span>${item}</span>`).join("")}</div>
         <div class="price-list">
-          ${SERVING_OPTIONS.map((price) => `
-            <div class="price-row"><span>${price.label}</span><strong>${money(price.price)}</strong></div>
+          ${SERVING_OPTIONS.map((size) => `
+            <div class="price-row">
+              <span>${size.short} servings</span>
+              <strong>${meal.inPipeline ? "Soon" : `From ${money(customerPrice(meal.id, size.id, "mackerel"))}`}</strong>
+            </div>
           `).join("")}
         </div>
       </div>
@@ -761,7 +868,8 @@ function mealCard(meal) {
 function detailPage() {
   const meal = getMeal(state.selectedMealId);
   const selectedSize = getSize(state.selectedSizeId);
-  const total = selectedSize.price + selectedAddOnTotal();
+  const selectedProtein = getProtein(state.selectedProteinId);
+  const total = meal.inPipeline ? 0 : customerPrice(meal.id, selectedSize.id, selectedProtein.id);
   const waitlisted = state.waitlist.includes(meal.id);
   const actionButton = meal.inPipeline
     ? `<button class="primary-button" data-waitlist="${meal.id}">${waitlisted ? "Waitlist Joined" : "Join Launch Waitlist"}</button>`
@@ -778,7 +886,7 @@ function detailPage() {
       </div>
       <div class="detail-grid">
         <div class="detail-panel detail-hero">
-          ${foodVisual(meal, "none")}
+          ${productStage(meal)}
           <div>
             <h3>${meal.shortName} kit</h3>
             <p>${meal.description}</p>
@@ -794,25 +902,30 @@ function detailPage() {
               ${SERVING_OPTIONS.map((size) => `
                 <button class="size-card ${state.selectedSizeId === size.id ? "selected" : ""}" data-size="${size.id}">
                   <strong>${size.label}</strong>
-                  <span>${money(size.price)} - ${size.note}</span>
+                  <span>${size.note}</span>
                 </button>
               `).join("")}
             </div>
           </div>
+          ${meal.inPipeline ? `
+            <div class="success-box">This kit is still in testing. Join the waitlist to get launch updates.</div>
+          ` : `
           <div class="serving-picker">
-            <h3>Optional upgrades</h3>
-            <div class="addon-grid">
-              ${ADD_ONS.map((addOn) => `
-                <button class="addon-card ${state.selectedAddOns.includes(addOn.id) ? "selected" : ""}" data-addon="${addOn.id}">
-                  <strong>${addOn.label}</strong>
-                  <span>${money(addOn.price)} - ${addOn.note}</span>
+            <h3>Select protein pouch</h3>
+            <div class="protein-grid">
+              ${PROTEIN_OPTIONS.map((protein) => `
+                <button class="protein-card ${state.selectedProteinId === protein.id ? "selected" : ""}" data-protein="${protein.id}">
+                  ${icon(protein.icon)}
+                  <strong>${protein.label}</strong>
+                  <span>${money(customerPrice(meal.id, selectedSize.id, protein.id))}</span>
                 </button>
               `).join("")}
             </div>
           </div>
+          `}
           <div class="inline-total">
             <span>Item total</span>
-            <strong>${money(total)}</strong>
+            <strong>${meal.inPipeline ? "Soon" : money(total)}</strong>
           </div>
           ${actionButton}
           ${meal.inPipeline && waitlisted ? `<div class="success-box">You are on the Pepper Soup launch waitlist.</div>` : ""}
@@ -846,15 +959,15 @@ function accessPage() {
       <div class="access-hero-card">
         <div>
           <h3>Recommended launch model</h3>
-          <p>Give every new customer a ${money(STARTER_CREDIT)} starter credit. It covers one eligible 2-serving box. Larger packs, extra boxes, protein upgrades and premium delivery windows create the paid transaction.</p>
+          <p>Give every new customer a ${money(STARTER_CREDIT)} starter credit. It covers one eligible 2-serving box. Larger packs, extra boxes, protein pouch choices and premium delivery windows create the paid transaction.</p>
         </div>
         <button class="primary-button" data-go="meals">Use Starter Credit</button>
       </div>
 
       <div class="pricing-grid">
         ${pricingCard("Free at account level", ["Create account", "Browse meals", "Save delivery profile", "Join Pepper Soup waitlist", `${money(STARTER_CREDIT)} starter credit`])}
-        ${pricingCard("Paid at checkout", ["Second soup box and beyond", "4-serving and family-size packs", "Assorted or double protein", "Extra spice pack", "Scheduled or express home delivery"])}
-        ${pricingCard("Future paid features", ["Saved weekly reorder", "Family bundle recommendations", "Bulk weekend cooking pack", "Priority stock reservation", "Premium protein catalogue"])}
+        ${pricingCard("Paid at checkout", ["Second soup box and beyond", "4-serving and family-size packs", "Protein pouch selection", "Scheduled or express home delivery", "Family bundle checkout"])}
+        ${pricingCard("Future paid features", ["Saved one-tap reorder", "Party pot bundle", "Priority stock reservation", "Premium protein catalogue", "Gift box delivery"])}
       </div>
     </section>
   `);
@@ -981,6 +1094,7 @@ function cartPage() {
         <div class="cart-list">
           ${state.cart.map((item) => `
             <article class="cart-item">
+              ${packedProductVisual(getMeal(item.mealId), item)}
               <div>
                 <h3>${item.title}</h3>
                 <p>${item.subtitle}</p>
@@ -1127,7 +1241,8 @@ function orderItems(items) {
     <div class="order-list">
       ${items.map((item) => `
         <div class="order-mini">
-          <span>${item.title} - ${item.subtitle}</span>
+          ${packedProductVisual(getMeal(item.mealId), item)}
+          <span>${item.title}<small>${item.subtitle}</small></span>
           <strong>${money(item.price)}</strong>
         </div>
       `).join("")}
@@ -1212,7 +1327,7 @@ app.addEventListener("click", (event) => {
   const goTarget = event.target.closest("[data-go]");
   const detailTarget = event.target.closest("[data-detail]");
   const sizeTarget = event.target.closest("[data-size]");
-  const addOnTarget = event.target.closest("[data-addon]");
+  const proteinTarget = event.target.closest("[data-protein]");
   const addTarget = event.target.closest("[data-add]");
   const waitlistTarget = event.target.closest("[data-waitlist]");
   const removeTarget = event.target.closest("[data-remove]");
@@ -1279,11 +1394,8 @@ app.addEventListener("click", (event) => {
     return;
   }
 
-  if (addOnTarget) {
-    const id = addOnTarget.dataset.addon;
-    state.selectedAddOns = state.selectedAddOns.includes(id)
-      ? state.selectedAddOns.filter((item) => item !== id)
-      : [...state.selectedAddOns, id];
+  if (proteinTarget) {
+    state.selectedProteinId = proteinTarget.dataset.protein;
     saveState();
     render();
     return;
