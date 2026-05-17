@@ -764,39 +764,41 @@ h3 {
   animation: shadowPulse 3s ease-in-out infinite;
 }
 
-.final-pack {
+.sealed-kit {
   position: relative;
   z-index: 2;
   display: grid;
-  width: 66%;
-  min-width: 130px;
-  max-width: 230px;
-  min-height: 205px;
-  align-content: space-between;
+  width: 82%;
+  min-width: 170px;
+  max-width: 320px;
+  min-height: 238px;
+  align-content: start;
+  gap: 12px;
   overflow: hidden;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 18px 18px 30px 30px;
+  padding: 18px 16px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 26px 26px 36px 36px;
   background:
-    linear-gradient(140deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 244, 0.9)),
-    linear-gradient(180deg, var(--pack-accent), #ffffff);
-  box-shadow: 0 24px 48px rgba(15, 52, 41, 0.22);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(236, 245, 238, 0.34));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.62),
+    inset 0 -22px 44px rgba(22, 75, 57, 0.08),
+    0 24px 48px rgba(15, 52, 41, 0.22);
+  backdrop-filter: blur(8px);
   animation: packFloat 3s ease-in-out infinite;
 }
 
-.final-pack::before {
+.sealed-kit::before {
   position: absolute;
-  top: 10px;
-  left: 50%;
-  width: 52px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(22, 75, 57, 0.14);
+  inset: 12px;
+  border: 1px solid rgba(22, 75, 57, 0.1);
+  border-radius: 20px 20px 30px 30px;
   content: "";
-  transform: translateX(-50%);
+  pointer-events: none;
 }
 
-.final-pack::after {
+.sealed-kit::after {
   position: absolute;
   inset: -40% auto auto -60%;
   width: 70%;
@@ -807,98 +809,153 @@ h3 {
   animation: packShine 4.2s ease-in-out infinite;
 }
 
-.pack-window {
-  min-height: 92px;
-  margin-top: 18px;
-  border-radius: 16px;
-  background:
-    linear-gradient(rgba(15, 52, 41, 0.08), rgba(15, 52, 41, 0.08)),
-    var(--pack-photo) center / cover;
-  box-shadow: inset 0 0 0 1px rgba(22, 75, 57, 0.12);
+.seal-strip {
+  justify-self: center;
+  width: 58px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(22, 75, 57, 0.13);
 }
 
-.pack-content {
+.kit-label {
   position: relative;
   z-index: 2;
   display: grid;
-  gap: 3px;
-  margin-top: 10px;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  align-items: center;
 }
 
-.pack-content span {
+.kit-label span {
+  grid-row: span 2;
   width: fit-content;
-  padding: 5px 8px;
-  border-radius: 7px;
+  padding: 8px 9px;
+  border-radius: 9px;
   background: var(--forest);
   color: #fff;
   font-size: 12px;
   font-weight: 1000;
 }
 
-.pack-content strong {
+.kit-label strong {
   color: var(--forest-2);
-  font-size: clamp(20px, 2vw, 26px);
+  font-size: clamp(22px, 2.2vw, 30px);
   line-height: 1;
 }
 
-.pack-content small {
+.kit-label small {
   color: var(--muted);
   font-weight: 900;
 }
 
-.pouch-badge,
-.protein-pouch {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid rgba(22, 75, 57, 0.14);
-  background: rgba(255, 255, 255, 0.88);
-  color: var(--forest-2);
-  box-shadow: 0 12px 24px rgba(15, 52, 41, 0.12);
-}
-
-.pouch-badge {
+.ingredient-layout {
   position: relative;
   z-index: 2;
-  width: fit-content;
-  margin-top: 10px;
-  padding: 7px 9px;
-  border-radius: 999px;
+  display: grid;
+  min-height: 138px;
+  grid-template-columns: 1.08fr 0.82fr;
+  grid-template-rows: 1fr 0.78fr;
+  gap: 8px;
+}
+
+.ingredient-sachet {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  min-height: 58px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow:
+    inset 0 0 0 1px rgba(22, 75, 57, 0.08),
+    0 10px 18px rgba(15, 52, 41, 0.08);
+}
+
+.ingredient-sachet::before {
+  position: absolute;
+  inset: 8px;
+  border-radius: 12px;
+  content: "";
+}
+
+.ingredient-sachet span,
+.ingredient-sachet .ui-icon {
+  position: relative;
+  z-index: 2;
+}
+
+.ingredient-sachet span {
+  color: var(--forest-2);
   font-size: 12px;
   font-weight: 1000;
-}
-
-.protein-pouch {
-  position: absolute;
-  right: 2%;
-  bottom: 28px;
-  z-index: 3;
-  width: 46%;
-  min-width: 110px;
-  max-width: 180px;
-  min-height: 86px;
-  flex-direction: column;
-  justify-content: center;
-  padding: 12px;
-  border-radius: 16px 16px 22px 22px;
   text-align: center;
-  animation: pouchFloat 3.4s ease-in-out infinite;
 }
 
-.protein-pouch span {
-  color: var(--muted);
+.soup-base {
+  grid-row: span 2;
+}
+
+.soup-base::before {
+  background:
+    radial-gradient(circle at 32% 35%, rgba(255, 238, 134, 0.8), transparent 25%),
+    linear-gradient(135deg, color-mix(in srgb, var(--pack-accent) 80%, white), #f2d582);
+}
+
+.greens::before {
+  background:
+    radial-gradient(circle at 24% 22%, #82bb62 0 12%, transparent 13%),
+    radial-gradient(circle at 64% 54%, #4f8f52 0 16%, transparent 17%),
+    linear-gradient(135deg, #dff2de, #7eb45f);
+}
+
+.spice::before {
+  background:
+    radial-gradient(circle at 28% 36%, #c9472b 0 12%, transparent 13%),
+    radial-gradient(circle at 70% 50%, #d79832 0 16%, transparent 17%),
+    linear-gradient(135deg, #fff1c9, #e15b3d);
+}
+
+.oil::before {
+  background: linear-gradient(135deg, #ffeab3, #d79832);
+}
+
+.protein {
+  grid-column: span 2;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.protein::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.84), color-mix(in srgb, var(--pack-accent) 22%, white));
+}
+
+.protein .ui-icon {
+  color: var(--pack-accent);
+}
+
+.fresh-strip {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(22, 75, 57, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--forest-2);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 1000;
   text-transform: uppercase;
 }
 
-.protein-pouch strong {
-  color: var(--forest-2);
-  font-size: 14px;
-}
-
-.protein-pouch .ui-icon {
+.fresh-strip strong {
   color: var(--pack-accent);
+  text-transform: none;
 }
 
 .meal-title-line {
@@ -1417,20 +1474,29 @@ h3 {
   min-height: 154px;
 }
 
-.cart-item .final-pack {
-  min-width: 96px;
-  min-height: 142px;
-  padding: 11px;
+.cart-item .sealed-kit {
+  min-width: 118px;
+  min-height: 154px;
+  padding: 12px;
+  border-radius: 18px 18px 26px 26px;
 }
 
-.cart-item .pack-window {
-  min-height: 56px;
+.cart-item .ingredient-layout {
+  min-height: 74px;
+  gap: 5px;
 }
 
-.cart-item .protein-pouch {
-  min-width: 78px;
-  min-height: 58px;
-  padding: 8px;
+.cart-item .ingredient-sachet span,
+.cart-item .fresh-strip {
+  font-size: 9px;
+}
+
+.cart-item .kit-label strong {
+  font-size: 18px;
+}
+
+.cart-item .kit-label small {
+  font-size: 11px;
 }
 
 .cart-item p {
@@ -1535,32 +1601,45 @@ h3 {
   min-height: 92px;
 }
 
-.order-mini .final-pack {
-  min-width: 58px;
-  width: 64%;
-  min-height: 86px;
+.order-mini .sealed-kit {
+  min-width: 68px;
+  width: 80%;
+  min-height: 90px;
+  gap: 4px;
   padding: 7px;
-  border-radius: 10px 10px 16px 16px;
+  border-radius: 12px 12px 18px 18px;
 }
 
-.order-mini .pack-window {
-  min-height: 32px;
-  margin-top: 12px;
-  border-radius: 9px;
-}
-
-.order-mini .pack-content span,
-.order-mini .pouch-badge,
-.order-mini .protein-pouch {
+.order-mini .seal-strip,
+.order-mini .fresh-strip,
+.order-mini .ingredient-sachet span,
+.order-mini .kit-label span,
+.order-mini .kit-label small {
   display: none;
 }
 
-.order-mini .pack-content strong {
-  font-size: 12px;
+.order-mini .ingredient-layout {
+  min-height: 42px;
+  gap: 3px;
 }
 
-.order-mini .pack-content small {
-  font-size: 10px;
+.order-mini .ingredient-sachet {
+  min-height: 18px;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.order-mini .ingredient-sachet::before {
+  inset: 3px;
+  border-radius: 4px;
+}
+
+.order-mini .kit-label {
+  display: block;
+}
+
+.order-mini .kit-label strong {
+  font-size: 11px;
 }
 
 .order-mini span {

@@ -11,7 +11,7 @@ Open `index.html` in any modern browser.
 - Customer sign up and sign in flow
 - Dashboard with order metrics and activity statement
 - Meal catalogue, meal details, serving sizes and paid upgrades
-- Cart, starter credit logic, delivery options and checkout confirmation
+- Cart, base kit pricing, protein pouch pricing, delivery options and checkout confirmation
 - Order history filters
 - Account settings, password update, 2FA toggle and saved addresses
 - Terms, privacy, support and food-safety content

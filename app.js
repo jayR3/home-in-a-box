@@ -1,4 +1,4 @@
-const STORAGE_KEY = "hib_customer_app_v1";
+const STORAGE_KEY = "hib_customer_app_v2";
 
 const SERVING_OPTIONS = [
   { id: "two", label: "2 servings", short: "2", multiplier: 1, note: "Solo or pair" },
@@ -64,8 +64,6 @@ const DELIVERY_OPTIONS = [
   { id: "scheduled", label: "Scheduled home delivery", price: 1500, note: "Choose a preferred day and time" },
   { id: "express", label: "Express home delivery", price: 2500, note: "Priority dispatch where available" },
 ];
-
-const STARTER_CREDIT = 5000;
 
 const IMAGE_CREDITS = [
   {
@@ -213,7 +211,6 @@ function defaultState() {
     cart: [],
     orders: [],
     orderFilter: "All",
-    starterCreditUsed: false,
     waitlist: [],
     savedAddresses: [],
     settings: {
@@ -260,7 +257,6 @@ function seedReturningCustomer(email) {
       city: "Lagos",
       password: "stored-securely",
     },
-    starterCreditUsed: true,
     savedAddresses: [
       { id: "addr-1", label: "Home", address: "Yaba, Lagos" },
       { id: "addr-2", label: "Weekend", address: "Lekki Phase 1, Lagos" },
@@ -290,11 +286,11 @@ function seedReturningCustomer(email) {
         id: "HIB-2402",
         date: "May 07, 2026",
         title: "Ogbono Soup Kit",
-        subtitle: "2 servings starter credit",
+        subtitle: "2 servings + goat mix",
         channel: "Standard home delivery",
         status: "Completed",
-        paymentStatus: "Covered by credit",
-        amount: 0,
+        paymentStatus: "Paid",
+        amount: 4848,
       },
     ],
   };
@@ -361,19 +357,12 @@ function cartSubtotal(items = state.cart) {
   return items.reduce((sum, item) => sum + item.price, 0);
 }
 
-function starterDiscount(items = state.cart) {
-  if (state.starterCreditUsed || !items.length) return 0;
-  const mealItems = items.filter((item) => item.type === "meal");
-  if (!mealItems.length) return 0;
-  return Math.min(STARTER_CREDIT, Math.max(...mealItems.map((item) => item.basePrice)));
-}
-
 function selectedDeliveryFee() {
   return getDelivery(state.selectedDeliveryId).price;
 }
 
 function checkoutTotal() {
-  return Math.max(0, cartSubtotal() - starterDiscount() + selectedDeliveryFee());
+  return Math.max(0, cartSubtotal() + selectedDeliveryFee());
 }
 
 function metrics() {
@@ -382,15 +371,14 @@ function metrics() {
   const inProgress = state.orders.filter((order) => order.status === "In progress").length;
   const completed = state.orders.filter((order) => order.status === "Completed").length;
   const completionRate = totalOrders ? Math.round((completed / totalOrders) * 100) : 0;
-  const credit = state.starterCreditUsed ? "Used" : `${money(STARTER_CREDIT)} available`;
 
   return {
     totalOrders,
     totalSpent,
     inProgress,
     completionRate,
-    credit,
-    cartValue: money(Math.max(0, cartSubtotal() - starterDiscount())),
+    savedAddresses: state.savedAddresses.length,
+    cartValue: money(cartSubtotal()),
   };
 }
 
@@ -473,15 +461,12 @@ function removeFromCart(itemId) {
 function placeOrder(form) {
   const data = new FormData(form);
   const subtotal = cartSubtotal();
-  const discount = starterDiscount();
   const delivery = getDelivery(state.selectedDeliveryId);
   const total = checkoutTotal();
   const items = [...state.cart];
   const title = items.length === 1 ? items[0].title : `${items.length} soup kits`;
   const subtitle = items.map((item) => item.subtitle).join(" + ");
-  const paymentStatus = total === 0 ? "Covered by credit" : "Paid";
-
-  if (discount > 0) state.starterCreditUsed = true;
+  const paymentStatus = "Paid";
 
   const order = {
     id: nextOrderId(),
@@ -499,7 +484,6 @@ function placeOrder(form) {
     ...order,
     items,
     subtotal,
-    discount,
     deliveryFee: delivery.price,
     deliveryLabel: delivery.label,
     location: data.get("location"),
@@ -553,22 +537,27 @@ function packedProductVisual(meal, item = {}) {
   return `
     <div class="pack-shot" style="--pack-accent:${meal.accent}; --pack-photo:url('${meal.image}')">
       <div class="pack-shadow"></div>
-      <div class="final-pack">
-        <div class="pack-window"></div>
-        <div class="pack-content">
+      <div class="sealed-kit">
+        <div class="seal-strip"></div>
+        <div class="kit-label">
           <span>HIB</span>
           <strong>${meal.shortName}</strong>
           <small>${size.label}</small>
         </div>
-        <div class="pouch-badge">
-          ${icon(protein.icon)}
-          <span>${protein.short}</span>
+        <div class="ingredient-layout">
+          <div class="ingredient-sachet soup-base"><span>Base</span></div>
+          <div class="ingredient-sachet greens"><span>Greens</span></div>
+          <div class="ingredient-sachet spice"><span>Spice</span></div>
+          <div class="ingredient-sachet oil"><span>Oil</span></div>
+          <div class="ingredient-sachet protein">
+            ${icon(protein.icon)}
+            <span>${protein.short}</span>
+          </div>
         </div>
-      </div>
-      <div class="protein-pouch">
-        ${icon(protein.icon)}
-        <span>Protein pouch</span>
-        <strong>${protein.short}</strong>
+        <div class="fresh-strip">
+          <span>Sealed transparent pack</span>
+          <strong>${protein.short}</strong>
+        </div>
       </div>
     </div>
   `;
@@ -593,7 +582,7 @@ function layout(content) {
     ["home", "Dashboard"],
     ["meals", "Meals"],
     ["orders", "Orders"],
-    ["access", "Access"],
+    ["access", "Pricing"],
     ["settings", "Account"],
   ];
 
@@ -615,9 +604,9 @@ function layout(content) {
           `).join("")}
         </nav>
         <div class="sidebar-card">
-          <span>Starter credit</span>
-          <strong>${state.starterCreditUsed ? "Used" : money(STARTER_CREDIT)}</strong>
-          <p>Applied automatically to the first eligible 2-serving box.</p>
+          <span>Checkout model</span>
+          <strong>No plan</strong>
+          <p>Customers pay per box, protein pouch and delivery preference.</p>
         </div>
       </aside>
 
@@ -722,7 +711,7 @@ function homePage() {
         <p class="eyebrow">Customer dashboard</p>
         <h1>Welcome back, ${firstName}</h1>
         <p class="lead">
-          Manage soup-kit orders, checkout credit, delivery details and account security from one dashboard.
+          Manage soup-kit orders, delivery details, payment history and account security from one dashboard.
         </p>
       <div class="button-row">
           <button class="primary-button" data-go="meals">Browse Meals</button>
@@ -740,7 +729,7 @@ function homePage() {
       ${metricCard("Total spent", money(data.totalSpent))}
       ${metricCard("In progress", data.inProgress)}
       ${metricCard("Completion rate", `${data.completionRate}%`)}
-      ${metricCard("Starter credit", data.credit)}
+      ${metricCard("Saved addresses", data.savedAddresses)}
       ${metricCard("Cart value", data.cartValue)}
     </section>
 
@@ -972,23 +961,23 @@ function accessPage() {
     <section>
       <div class="section-head">
         <div>
-          <p class="eyebrow">Starter access</p>
-          <h2>Free to start, payable when value is added</h2>
+          <p class="eyebrow">Pricing model</p>
+          <h2>Simple checkout without subscriptions</h2>
         </div>
-        <p>Home in a Box should avoid recurring commitments at launch. The customer starts easily, then pays at checkout for larger orders and premium convenience.</p>
+        <p>Customers can browse freely, then pay only for the soup kit, selected protein pouch and delivery preference they choose.</p>
       </div>
 
       <div class="access-hero-card">
         <div>
           <h3>Recommended launch model</h3>
-          <p>Give every new customer a ${money(STARTER_CREDIT)} starter credit. It covers one eligible 2-serving box. Larger packs, extra boxes, protein pouch choices and premium delivery windows create the paid transaction.</p>
+          <p>Keep account creation free, but charge at checkout for the food box itself, protein pouch choice, larger serving sizes, family packs and premium delivery windows.</p>
         </div>
-        <button class="primary-button" data-go="meals">Use Starter Credit</button>
+        <button class="primary-button" data-go="meals">Build a Box</button>
       </div>
 
       <div class="pricing-grid">
-        ${pricingCard("Free at account level", ["Create account", "Browse meals", "Save delivery profile", "Join Pepper Soup waitlist", `${money(STARTER_CREDIT)} starter credit`])}
-        ${pricingCard("Paid at checkout", ["Second soup box and beyond", "4-serving and family-size packs", "Protein pouch selection", "Scheduled or express home delivery", "Family bundle checkout"])}
+        ${pricingCard("Free at account level", ["Create account", "Browse meals", "Save delivery profile", "Join Pepper Soup waitlist", "Track order history"])}
+        ${pricingCard("Paid at checkout", ["Soup kit base pack", "4-serving and family-size packs", "Protein pouch selection", "Scheduled or express home delivery", "Family bundle checkout"])}
         ${pricingCard("Future paid features", ["Saved one-tap reorder", "Party pot bundle", "Priority stock reservation", "Premium protein catalogue", "Gift box delivery"])}
       </div>
     </section>
@@ -1108,8 +1097,7 @@ function settingsPage() {
 
 function cartPage() {
   const subtotal = cartSubtotal();
-  const discount = starterDiscount();
-  const total = Math.max(0, subtotal - discount);
+  const total = subtotal;
   const content = state.cart.length
     ? `
       <div class="cart-layout">
@@ -1130,7 +1118,6 @@ function cartPage() {
           <h3>Order summary</h3>
           <div class="summary-row"><span>Items</span><strong>${state.cart.length}</strong></div>
           <div class="summary-row"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
-          ${discount ? `<div class="summary-row savings"><span>Starter credit</span><strong>- ${money(discount)}</strong></div>` : ""}
           <div class="summary-row total"><span>Due before delivery</span><strong>${money(total)}</strong></div>
           <button class="primary-button" data-go="checkout">Checkout</button>
           <button class="secondary-button" data-go="meals">Add More Meals</button>
@@ -1198,23 +1185,20 @@ function checkoutPage() {
             `).join("")}
           </div>
           <div class="payment-panel">
-            <h3>${payable > 0 ? "Payment required" : "No payment required"}</h3>
-            <p>${payable > 0 ? "The payable balance can be settled by card, bank transfer or wallet at checkout." : "Your starter credit covers the current order balance."}</p>
-            ${payable > 0 ? `
+            <h3>Payment required</h3>
+            <p>The payable balance can be settled by card, bank transfer or wallet at checkout.</p>
               <div class="payment-methods">
                 <label><input type="radio" name="paymentMethod" value="Card" checked /> Card</label>
                 <label><input type="radio" name="paymentMethod" value="Bank transfer" /> Bank transfer</label>
                 <label><input type="radio" name="paymentMethod" value="Wallet" /> Wallet</label>
               </div>
-            ` : `<input type="hidden" name="paymentMethod" value="Starter credit" />`}
           </div>
-          <button class="primary-button" type="submit">${payable > 0 ? `Confirm Payment - ${money(payable)}` : "Place Order"}</button>
+          <button class="primary-button" type="submit">Confirm Payment - ${money(payable)}</button>
         </form>
         <aside class="checkout-panel">
           <h3>Final summary</h3>
           ${orderItems(state.cart)}
           <div class="summary-row"><span>Subtotal</span><strong>${money(cartSubtotal())}</strong></div>
-          ${starterDiscount() ? `<div class="summary-row savings"><span>Starter credit</span><strong>- ${money(starterDiscount())}</strong></div>` : ""}
           <div class="summary-row"><span>${delivery.label}</span><strong>${money(delivery.price)}</strong></div>
           <div class="summary-row total"><span>Total due</span><strong>${money(payable)}</strong></div>
         </aside>
@@ -1250,7 +1234,6 @@ function checkoutSuccessPage() {
         </div>
         ${orderItems(order.items)}
         <div class="summary-row"><span>Subtotal</span><strong>${money(order.subtotal)}</strong></div>
-        ${order.discount ? `<div class="summary-row savings"><span>Starter credit</span><strong>- ${money(order.discount)}</strong></div>` : ""}
         <div class="summary-row"><span>Delivery fee</span><strong>${money(order.deliveryFee)}</strong></div>
         <div class="summary-row total"><span>Total paid</span><strong>${money(order.amount)}</strong></div>
       </aside>
