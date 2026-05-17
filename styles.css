@@ -556,6 +556,105 @@ h3 {
   pointer-events: none;
 }
 
+.showcase-pack {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  z-index: 4;
+  display: grid;
+  width: min(48%, 260px);
+  min-height: 260px;
+  align-content: start;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 20px 20px 34px 34px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(250, 250, 244, 0.86)),
+    linear-gradient(180deg, var(--pack-accent), #fff);
+  box-shadow: 0 26px 54px rgba(15, 52, 41, 0.24);
+  pointer-events: none;
+  animation: packFloat 3s ease-in-out infinite;
+}
+
+.showcase-pack::before {
+  justify-self: center;
+  width: 56px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(22, 75, 57, 0.16);
+  content: "";
+}
+
+.showcase-pack::after {
+  position: absolute;
+  inset: -40% auto auto -60%;
+  width: 70%;
+  height: 180%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  content: "";
+  transform: rotate(22deg);
+  animation: packShine 4.2s ease-in-out infinite;
+}
+
+.showcase-window {
+  min-height: 96px;
+  border-radius: 18px;
+  background:
+    linear-gradient(rgba(15, 52, 41, 0.08), rgba(15, 52, 41, 0.08)),
+    var(--pack-photo) center / cover;
+  box-shadow: inset 0 0 0 1px rgba(22, 75, 57, 0.12);
+}
+
+.showcase-copy {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+}
+
+.showcase-copy span {
+  width: fit-content;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--forest);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.showcase-copy strong {
+  color: var(--forest-2);
+  font-size: clamp(24px, 2.6vw, 34px);
+  line-height: 1;
+}
+
+.showcase-copy small {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.showcase-protein {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px solid rgba(22, 75, 57, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--forest-2);
+  font-size: 13px;
+  font-weight: 1000;
+  box-shadow: 0 12px 24px rgba(15, 52, 41, 0.12);
+}
+
+.showcase-protein .ui-icon {
+  color: var(--pack-accent);
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

@@ -563,13 +563,32 @@ function packedProductVisual(meal, item = {}) {
   `;
 }
 
+function showcasePackVisual(meal) {
+  const protein = getProtein(state.selectedProteinId);
+  const size = getSize(state.selectedSizeId);
+  return `
+    <div class="showcase-pack" style="--pack-accent:${meal.accent}; --pack-photo:url('${meal.image}')">
+      <div class="showcase-window"></div>
+      <div class="showcase-copy">
+        <span>HIB</span>
+        <strong>${meal.shortName}</strong>
+        <small>${size.label}</small>
+      </div>
+      <div class="showcase-protein">
+        ${icon(protein.icon)}
+        <span>${protein.short}</span>
+      </div>
+    </div>
+  `;
+}
+
 function productStage(meal) {
   return `
     <div class="product-stage">
       <div class="stage-photo">
         <img src="${meal.image}" alt="${meal.name} cooked soup" loading="lazy" />
       </div>
-      ${packedProductVisual(meal)}
+      ${showcasePackVisual(meal)}
     </div>
   `;
 }
